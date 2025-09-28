@@ -179,7 +179,6 @@ adminLoginBtn.addEventListener("click", async (ev)=>{
       adminLoginForm.hidden = true;
       adminPanel.hidden = false;
       adminLoginMsg.textContent = "";
-      // تاريخ اليوم
       if(!attDate.value){
         const today = new Date();
         attDate.value = today.toISOString().slice(0,10);
@@ -210,15 +209,34 @@ function filterSubs(list, q){
   );
 }
 
+// ✅ نسخة أقوى + منع كاش بالـ ts
 async function loadSubmissions(){
   subsTable.innerHTML = "<div class='cell'>جارِ التحميل...</div>";
   try{
-    const res = await fetch(ENDPOINT + "?action=submissions");
+    const url = ENDPOINT + "?action=submissions&ts=" + Date.now();
+    const res = await fetch(url);
     const data = await res.json();
-    if(!data.ok) throw new Error();
-    allSubs = data.submissions || [];
+
+    if(!data.ok) throw new Error(data.reason || "load failed");
+
+    allSubs = Array.isArray(data.submissions) ? data.submissions : [];
+
+    if(allSubs.length === 0){
+      subsTable.innerHTML = `
+        <div class="row head">
+          <div class="cell"><input type="checkbox" id="checkAll"></div>
+          <div class="cell">الاسم</div>
+          <div class="cell">رقم الجلوس</div>
+          <div class="cell">الرغبة</div>
+        </div>
+        <div class="cell" style="padding:14px;">لا يوجد مسجلين لعرضهم.</div>
+      `;
+      return;
+    }
+
     renderSubsTable(filterSubs(allSubs, searchInput.value));
-  }catch{
+  }catch(err){
+    console.error(err);
     subsTable.innerHTML = "<div class='cell'>تعذر تحميل البيانات.</div>";
   }
 }
