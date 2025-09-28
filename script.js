@@ -55,13 +55,11 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!ENDPOINT) return;
 
-  const payload = {
-    name: $("#name").value.trim(),
-    seat: $("#seat").value.trim(),
-    choice: $("#choice").value,
-  };
+  const name = $("#name").value.trim();
+  const seat = $("#seat").value.trim();
+  const choice = $("#choice").value;
 
-  if (!payload.name || !payload.seat || !payload.choice) {
+  if (!name || !seat || !choice) {
     showStatus("اكمل جميع الحقول.", "warn");
     return;
   }
@@ -70,21 +68,24 @@ form.addEventListener("submit", async (e) => {
   showStatus("جارٍ الإرسال...");
 
   try {
-    // ✅ send as x-www-form-urlencoded to avoid CORS preflight
-    const body = new URLSearchParams(payload).toString();
-    const res = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-      body,
-    });
+    // ✅ استخدم FormData بدون أي headers لتفادي preflight
+    const fd = new FormData();
+    fd.append("name", name);
+    fd.append("seat", seat);
+    fd.append("choice", choice);
 
-    const data = await res.json();
+    const res = await fetch(ENDPOINT, { method: "POST", body: fd });
 
-    if (data.ok) {
+    // حاول قراءة JSON، ولو مش JSON اطبع الخام للتشخيص
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); } catch { data = null; }
+
+    if (data && data.ok) {
       showStatus("🎉 تم تسجيل رغبتك بنجاح.", "ok");
       form.reset();
       await loadCapacities(); // refresh remaining
-    } else {
+    } else if (data) {
       if (data.code === "FULL") {
         showStatus("❌ الرغبة مكتملة. اختر رغبة أخرى.", "err");
         await loadCapacities();
@@ -95,6 +96,9 @@ form.addEventListener("submit", async (e) => {
       } else {
         showStatus("حدث خطأ: " + (data.reason || "غير معروف"), "err");
       }
+    } else {
+      console.error("Non-JSON response:", raw);
+      showStatus("تعذر الإرسال. تحقق من اتصالك أو رابط الخدمة.", "err");
     }
   } catch (err) {
     console.error(err);
