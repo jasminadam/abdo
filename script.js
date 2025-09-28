@@ -188,4 +188,110 @@ searchInput.addEventListener("input", ()=>{
   renderSubsTable(filterSubs(allSubs, searchInput.value));
 });
 
-function filterSubs(list, q)
+function filterSubs(list, q){
+  q = (q||"").trim();
+  if(!q) return list;
+  return list.filter(s =>
+    String(s.name||"").includes(q) ||
+    String(s.seat||"").includes(q)
+  );
+}
+
+// Load submissions (with ts to bypass cache)
+async function loadSubmissions(){
+  subsTable.innerHTML = "<div class='cell'>جارِ التحميل...</div>";
+  try{
+    const url = ENDPOINT + "?action=submissions&ts=" + Date.now();
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("submissions JSON:", data); // 👈 يساعدنا لو حصلت مشكلة
+
+    if(!data.ok) throw new Error(data.reason || "load failed");
+
+    allSubs = Array.isArray(data.submissions) ? data.submissions : [];
+
+    if(allSubs.length === 0){
+      subsTable.innerHTML = `
+        <div class="row head">
+          <div class="cell"><input type="checkbox" id="checkAll"></div>
+          <div class="cell">الاسم</div>
+          <div class="cell">رقم الجلوس</div>
+          <div class="cell">الرغبة</div>
+        </div>
+        <div class="cell" style="padding:14px;">لا يوجد مسجلين لعرضهم.</div>
+      `;
+      return;
+    }
+
+    renderSubsTable(filterSubs(allSubs, searchInput.value));
+  }catch(err){
+    console.error(err);
+    subsTable.innerHTML = "<div class='cell'>تعذر تحميل البيانات.</div>";
+  }
+}
+
+function renderSubsTable(rows){
+  const head = `
+    <div class="row head">
+      <div class="cell"><input type="checkbox" id="checkAll"></div>
+      <div class="cell">الاسم</div>
+      <div class="cell">رقم الجلوس</div>
+      <div class="cell">الرغبة</div>
+    </div>`;
+  const body = rows.map(r=>`
+    <div class="row">
+      <div class="cell"><input type="checkbox" class="att" data-seat="${r.seat}"></div>
+      <div class="cell">${r.name}</div>
+      <div class="cell">${r.seat}</div>
+      <div class="cell">${r.choice}</div>
+    </div>
+  `).join("");
+  subsTable.innerHTML = head + body;
+
+  const checkAll = $("#checkAll");
+  if(checkAll){
+    checkAll.addEventListener("change", ()=>{
+      $$(".att").forEach(cb=> cb.checked = checkAll.checked);
+    });
+  }
+}
+
+saveAttendance.addEventListener("click", async ()=>{
+  if(!adminCreds){ return; }
+  const date = attDate.value;
+  const seats = $$(".att:checked").map(cb=> cb.dataset.seat);
+  if(!date || seats.length===0){
+    adminMsg.textContent = "اختر تاريخ وحدد طلاب.";
+    adminMsg.className = "status warn";
+    return;
+  }
+  adminMsg.textContent = "جارِ الحفظ...";
+  try{
+    const fd = new FormData();
+    fd.append("mode","attendance");
+    fd.append("user", adminCreds.user);
+    fd.append("pass", adminCreds.pass);
+    fd.append("date", date);
+    fd.append("seats", seats.join(","));
+
+    const res = await fetch(ENDPOINT, { method:"POST", body:fd });
+    const data = await res.json();
+    if(data.ok){
+      adminMsg.textContent = "تم تسجيل الحضور.";
+      adminMsg.className = "status ok";
+      toast("تم تسجيل حضور "+seats.length+" طالب.", "ok");
+    }else{
+      adminMsg.textContent = data.reason || "فشل الحفظ.";
+      adminMsg.className = "status err";
+    }
+  }catch{
+    adminMsg.textContent = "تعذر الاتصال.";
+    adminMsg.className = "status err";
+  }
+});
+
+// typing constraints
+$("#seat").addEventListener("input", (e)=>{ e.target.value = e.target.value.replace(/[^0-9]/g,""); });
+$("#name").addEventListener("input", (e)=>{ e.target.value = e.target.value.replace(/[^\u0600-\u06FF\s]/g,""); });
+
+loadCapacities();
