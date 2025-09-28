@@ -11,10 +11,10 @@ const SHEET_ID = "1TgwqE0aY2eBMbcIUS99y-JgrGju8WEMcKLjN9S93Omk";
 
 function getSheets_(){
   const ss  = SpreadsheetApp.openById(SHEET_ID);
-  const cfg = ss.getSheetByName("Config") || ss.insertSheet("Config");
+  const cfg = ss.getSheetByName("Config")      || ss.insertSheet("Config");
   const sub = ss.getSheetByName("Submissions") || ss.insertSheet("Submissions");
-  const adm = ss.getSheetByName("Admins") || ss.insertSheet("Admins");
-  const att = ss.getSheetByName("Attendance") || ss.insertSheet("Attendance");
+  const adm = ss.getSheetByName("Admins")      || ss.insertSheet("Admins");
+  const att = ss.getSheetByName("Attendance")  || ss.insertSheet("Attendance");
 
   if (cfg.getLastRow() === 0) cfg.getRange(1,1,1,2).setValues([["Choice","Capacity"]]);
   if (sub.getLastRow() === 0) sub.getRange(1,1,1,4).setValues([["Timestamp","Name","Seat","Choice"]]);
@@ -84,26 +84,22 @@ function doGet(e){
     }
 
     if (action === "submissions"){
-      // قويّ: fallback على getDataRange لو getLastRow قليل
-      let values = [];
-      const lastRow = sub.getLastRow();
-      if (lastRow >= 2){
-        values = sub.getRange(2,1,lastRow-1,4).getValues();
-      } else {
-        const rng = sub.getDataRange().getValues();
-        values = rng.length > 1 ? rng.slice(1) : [];
-      }
-      // تجاهل الصفوف الفارغة فقط
-      const rows = values.filter(r =>
+      // ✅ اقرأ دائمًا كل الشيت بدون الاعتماد على getLastRow()
+      const rng  = sub.getDataRange().getValues();         // [ [Hdr...], [row2...], ... ]
+      const rows = rng.length > 1 ? rng.slice(1) : [];      // تجاهل الهيدر
+      const filtered = rows.filter(r =>
         String(r[1]).trim() !== "" || String(r[2]).trim() !== "" || String(r[3]).trim() !== ""
       );
-      const submissions = rows.map(r=>({
-        ts: r[0], name: String(r[1]).trim(), seat: String(r[2]).trim(), choice: String(r[3]).trim()
+      const submissions = filtered.map(r => ({
+        ts: r[0],
+        name: String(r[1]).trim(),
+        seat: String(r[2]).trim(),
+        choice: String(r[3]).trim()
       }));
       return _json_({ ok:true, submissions });
     }
 
-    // ✅ تفعيل لوجين الأدمن عبر GET أيضاً
+    // ✅ لوجين الأدمن عبر GET
     if (action === "login"){
       const u = (e.parameter && String(e.parameter.u || "").trim()) || "";
       const p = (e.parameter && String(e.parameter.p || "").trim()) || "";
@@ -127,7 +123,7 @@ function doPost(e){
       e && e.postData && e.postData.type && String(e.postData.type).indexOf("application/json") !== -1 ? "signup" : "signup"
     );
 
-    // ما زلنا ندعم Login عبر POST لو حبيت
+    // (اختياري) لوجين عبر POST
     if (mode === "login"){
       const user = String((e.parameter && e.parameter.user) || "").trim();
       const pass = String((e.parameter && e.parameter.pass) || "").trim();
@@ -141,16 +137,14 @@ function doPost(e){
       const date  = String((e.parameter && e.parameter.date) || "");
       const seats = String((e.parameter && e.parameter.seats) || "");
       if (!user || !pass || !date || !seats) return _json_({ ok:false, reason:"missing params" });
-      if (!_isAdmin_(adm, user, pass)) return _json_({ ok:false, reason:"auth failed" });
+      if (!_isAdmin_(adm, user, pass))      return _json_({ ok:false, reason:"auth failed" });
 
-      const list = seats.split(",").map(s=>s.trim()).filter(Boolean);
+      const list  = seats.split(",").map(s=>s.trim()).filter(Boolean);
       const tsNow = new Date();
-      const rows = [];
+      const rows  = [];
       for (const seat of list){
         const rec = _findBySeat_(sub, seat);
-        if (rec){
-          rows.push([tsNow, date, rec.seat, rec.name, rec.choice, user]);
-        }
+        if (rec) rows.push([tsNow, date, rec.seat, rec.name, rec.choice, user]);
       }
       if (rows.length>0){
         att.getRange(att.getLastRow()+1, 1, rows.length, 6).setValues(rows);
