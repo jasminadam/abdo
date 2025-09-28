@@ -25,10 +25,10 @@ const refreshSubs = $("#refreshSubs");
 const subsTable   = $("#subsTable");
 const saveAttendance = $("#saveAttendance");
 
-let adminCreds = null; // {user, pass}
-let allSubs = [];      // submissions list (for admin panel)
+let adminCreds = null;
+let allSubs = [];
 
-// Toast helper
+// Toast
 function toast(msg, type="ok"){
   const el = document.createElement("div");
   el.className = `toast ${type}`;
@@ -37,17 +37,17 @@ function toast(msg, type="ok"){
   setTimeout(()=>{ el.remove(); }, 2800);
 }
 
-// Status helper (inline)
+// Inline status
 function showStatus(msg, cls = ""){
   statusEl.textContent = msg;
   statusEl.className = "status " + cls;
 }
 
-// Regex validators
-const arabicNameRE = /^[\u0600-\u06FF\s]+$/;            // حروف عربية ومسافات
-const seatRE       = /^[0-9]{1,10}$/;                   // أرقام إنجليزية فقط
+// Validators
+const arabicNameRE = /^[\u0600-\u06FF\s]+$/;
+const seatRE       = /^[0-9]{1,10}$/;
 
-// Load capacities & stats
+// Load choices & stats
 async function loadCapacities(silent = false){
   if(!ENDPOINT){
     if(!silent) showStatus("⚠️ لم يتم ضبط رابط الخدمة الخلفية بعد. عدل ENDPOINT.", "warn");
@@ -59,7 +59,6 @@ async function loadCapacities(silent = false){
     const data = await res.json();
     if(!data.ok) throw new Error(data.reason || "تعذر التحميل");
 
-    // fill select
     choiceSelect.innerHTML = '<option value="" disabled selected>اختر رغبتك</option>';
     data.choices.forEach(c=>{
       const remaining = Math.max(0, Number(c.capacity)-Number(c.taken));
@@ -70,9 +69,7 @@ async function loadCapacities(silent = false){
       choiceSelect.appendChild(opt);
     });
 
-    // cards stats
     renderStats(data.choices);
-
     submitBtn.disabled = false;
     if(!silent) showStatus("✔️ جاهز للتسجيل", "ok");
   }catch(err){
@@ -83,7 +80,6 @@ async function loadCapacities(silent = false){
 }
 
 function renderStats(choices){
-  // إجمالي المسجلين + كروت لكل رغبة
   const total = choices.reduce((s,c)=> s + Number(c.taken||0), 0);
   const blocks = [
     `<div class="stat"><div class="label">إجمالي المسجلين</div><div class="value">${total}</div></div>`
@@ -100,7 +96,7 @@ function renderStats(choices){
   statsEl.innerHTML = blocks.join("");
 }
 
-// Submit form (with validation)
+// Submit
 form.addEventListener("submit", async (e)=>{
   e.preventDefault();
   if(!ENDPOINT) return;
@@ -109,21 +105,9 @@ form.addEventListener("submit", async (e)=>{
   const seat  = $("#seat").value.trim();
   const choice= $("#choice").value;
 
-  // validation
-  if(!arabicNameRE.test(name)){
-    toast("⚠️ الاسم يجب أن يكون بالعربية فقط.", "err");
-    showStatus("الاسم بالعربية فقط.", "warn");
-    return;
-  }
-  if(!seatRE.test(seat)){
-    toast("⚠️ رقم الجلوس أرقام إنجليزية فقط.", "err");
-    showStatus("رقم الجلوس أرقام إنجليزية فقط.", "warn");
-    return;
-  }
-  if(!choice){
-    toast("اختر الرغبة.", "err");
-    return;
-  }
+  if(!arabicNameRE.test(name)){ toast("⚠️ الاسم بالعربية فقط.", "err"); showStatus("الاسم بالعربية فقط.", "warn"); return; }
+  if(!seatRE.test(seat)){ toast("⚠️ رقم الجلوس أرقام إنجليزية فقط.", "err"); showStatus("رقم الجلوس أرقام إنجليزية فقط.", "warn"); return; }
+  if(!choice){ toast("اختر الرغبة.", "err"); return; }
 
   submitBtn.disabled = true;
   showStatus("جارٍ الإرسال...");
@@ -164,7 +148,7 @@ form.addEventListener("submit", async (e)=>{
 // Admin dialog
 adminOpen.addEventListener("click", ()=> { dlg.showModal(); });
 
-// ✅ تسجيل دخول الأدمن عبر POST فقط
+// Login via POST
 adminLoginBtn.addEventListener("click", async (ev)=>{
   ev.preventDefault();
   const user = $("#adminUser").value.trim();
@@ -175,7 +159,6 @@ adminLoginBtn.addEventListener("click", async (ev)=>{
     fd.append("mode","login");
     fd.append("user", user);
     fd.append("pass", pass);
-
     const res = await fetch(ENDPOINT, { method:"POST", body:fd });
     const data = await res.json();
 
@@ -205,114 +188,4 @@ searchInput.addEventListener("input", ()=>{
   renderSubsTable(filterSubs(allSubs, searchInput.value));
 });
 
-function filterSubs(list, q){
-  q = (q||"").trim();
-  if(!q) return list;
-  return list.filter(s =>
-    String(s.name||"").includes(q) ||
-    String(s.seat||"").includes(q)
-  );
-}
-
-// تحميل المسجلين (مع منع الكاش)
-async function loadSubmissions(){
-  subsTable.innerHTML = "<div class='cell'>جارِ التحميل...</div>";
-  try{
-    const url = ENDPOINT + "?action=submissions&ts=" + Date.now();
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if(!data.ok) throw new Error(data.reason || "load failed");
-
-    allSubs = Array.isArray(data.submissions) ? data.submissions : [];
-
-    if(allSubs.length === 0){
-      subsTable.innerHTML = `
-        <div class="row head">
-          <div class="cell"><input type="checkbox" id="checkAll"></div>
-          <div class="cell">الاسم</div>
-          <div class="cell">رقم الجلوس</div>
-          <div class="cell">الرغبة</div>
-        </div>
-        <div class="cell" style="padding:14px;">لا يوجد مسجلين لعرضهم.</div>
-      `;
-      return;
-    }
-
-    renderSubsTable(filterSubs(allSubs, searchInput.value));
-  }catch(err){
-    console.error(err);
-    subsTable.innerHTML = "<div class='cell'>تعذر تحميل البيانات.</div>";
-  }
-}
-
-function renderSubsTable(rows){
-  const head = `
-    <div class="row head">
-      <div class="cell"><input type="checkbox" id="checkAll"></div>
-      <div class="cell">الاسم</div>
-      <div class="cell">رقم الجلوس</div>
-      <div class="cell">الرغبة</div>
-    </div>`;
-  const body = rows.map(r=>`
-    <div class="row">
-      <div class="cell"><input type="checkbox" class="att" data-seat="${r.seat}"></div>
-      <div class="cell">${r.name}</div>
-      <div class="cell">${r.seat}</div>
-      <div class="cell">${r.choice}</div>
-    </div>
-  `).join("");
-  subsTable.innerHTML = head + body;
-
-  const checkAll = $("#checkAll");
-  if(checkAll){
-    checkAll.addEventListener("change", ()=>{
-      $$(".att").forEach(cb=> cb.checked = checkAll.checked);
-    });
-  }
-}
-
-saveAttendance.addEventListener("click", async ()=>{
-  if(!adminCreds){ return; }
-  const date = attDate.value;
-  const seats = $$(".att:checked").map(cb=> cb.dataset.seat);
-  if(!date || seats.length===0){
-    adminMsg.textContent = "اختر تاريخ وحدد طلاب.";
-    adminMsg.className = "status warn";
-    return;
-  }
-  adminMsg.textContent = "جارِ الحفظ...";
-  try{
-    const fd = new FormData();
-    fd.append("mode","attendance");
-    fd.append("user", adminCreds.user);
-    fd.append("pass", adminCreds.pass);
-    fd.append("date", date);
-    fd.append("seats", seats.join(","));
-
-    const res = await fetch(ENDPOINT, { method:"POST", body:fd });
-    const data = await res.json();
-    if(data.ok){
-      adminMsg.textContent = "تم تسجيل الحضور.";
-      adminMsg.className = "status ok";
-      toast("تم تسجيل حضور "+seats.length+" طالب.", "ok");
-    }else{
-      adminMsg.textContent = data.reason || "فشل الحفظ.";
-      adminMsg.className = "status err";
-    }
-  }catch{
-    adminMsg.textContent = "تعذر الاتصال.";
-    adminMsg.className = "status err";
-  }
-});
-
-// Inputs: enforce patterns also at typing time
-$("#seat").addEventListener("input", (e)=>{
-  e.target.value = e.target.value.replace(/[^0-9]/g,"");
-});
-$("#name").addEventListener("input", (e)=>{
-  e.target.value = e.target.value.replace(/[^\u0600-\u06FF\s]/g,"");
-});
-
-// Kickoff
-loadCapacities();
+function filterSubs(list, q)
