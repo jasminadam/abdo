@@ -69,12 +69,12 @@ function _isAdmin_(adm, user, pass){
   return false;
 }
 
-// OPTIONS preflight
+// OPTIONS preflight (للسلامة)
 function doOptions(e){ return ContentService.createTextOutput(""); }
 
 function doGet(e){
   try{
-    const { cfg, sub } = getSheets_();
+    const { cfg, sub, adm } = getSheets_();
     const action = (e && e.parameter && e.parameter.action) || "choices";
 
     if (action === "choices"){
@@ -84,7 +84,7 @@ function doGet(e){
     }
 
     if (action === "submissions"){
-      // robust: جرّب getLastRow ثم fallback إلى getDataRange
+      // قويّ: fallback على getDataRange لو getLastRow قليل
       let values = [];
       const lastRow = sub.getLastRow();
       if (lastRow >= 2){
@@ -93,22 +93,22 @@ function doGet(e){
         const rng = sub.getDataRange().getValues();
         values = rng.length > 1 ? rng.slice(1) : [];
       }
-      // شيل الصفوف الفارغة فقط
+      // تجاهل الصفوف الفارغة فقط
       const rows = values.filter(r =>
         String(r[1]).trim() !== "" || String(r[2]).trim() !== "" || String(r[3]).trim() !== ""
       );
       const submissions = rows.map(r=>({
-        ts: r[0],
-        name: String(r[1]).trim(),
-        seat: String(r[2]).trim(),
-        choice: String(r[3]).trim()
+        ts: r[0], name: String(r[1]).trim(), seat: String(r[2]).trim(), choice: String(r[3]).trim()
       }));
       return _json_({ ok:true, submissions });
     }
 
-    // التحقق الحقيقي للأدمن يتم في doPost(mode=login)
+    // ✅ تفعيل لوجين الأدمن عبر GET أيضاً
     if (action === "login"){
-      return _json_({ ok:false, reason:"use POST mode=login" });
+      const u = (e.parameter && String(e.parameter.u || "").trim()) || "";
+      const p = (e.parameter && String(e.parameter.p || "").trim()) || "";
+      const ok = _isAdmin_(adm, u, p);
+      return _json_({ ok });
     }
 
     return _json_({ ok:false, reason:"Unknown action" });
@@ -127,6 +127,7 @@ function doPost(e){
       e && e.postData && e.postData.type && String(e.postData.type).indexOf("application/json") !== -1 ? "signup" : "signup"
     );
 
+    // ما زلنا ندعم Login عبر POST لو حبيت
     if (mode === "login"){
       const user = String((e.parameter && e.parameter.user) || "").trim();
       const pass = String((e.parameter && e.parameter.pass) || "").trim();
@@ -157,7 +158,7 @@ function doPost(e){
       return _json_({ ok:true, saved:rows.length });
     }
 
-    // default: signup
+    // default: signup (JSON أو form-data)
     let name="", seat="", choice="";
     const isJSON = !!(e && e.postData && e.postData.type &&
                       String(e.postData.type).indexOf("application/json") !== -1);
