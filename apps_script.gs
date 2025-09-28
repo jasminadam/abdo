@@ -84,7 +84,7 @@ function doGet(e){
     }
 
     if (action === "submissions"){
-      // ✅ قراءة قوية بدون الاعتماد فقط على getLastRow
+      // قراءة قوية بدون الاعتماد فقط على getLastRow
       const rng  = sub.getDataRange().getValues();
       const rows = (rng.length > 1 ? rng.slice(1) : [])
         .filter(r => String(r[1]).trim() !== "" || String(r[2]).trim() !== "" || String(r[3]).trim() !== "");
@@ -92,11 +92,10 @@ function doGet(e){
       return _json_({ ok:true, submissions });
     }
 
+    // (ملاحظة) التحقق الحقيقي للأدمن ننفذه في doPost(mode=login)
     if (action === "login"){
-      const u = (e.parameter && e.parameter.u) || "";
-      const p = (e.parameter && e.parameter.p) || "";
-      const ok = _isAdmin_(adm, String(u).trim(), String(p).trim());
-      return _json_({ ok });
+      // رجّع رفض صريح لو حد حاول GET
+      return _json_({ ok:false, reason:"use POST mode=login" });
     }
 
     return _json_({ ok:false, reason:"Unknown action" });
@@ -114,6 +113,14 @@ function doPost(e){
     const mode = (e && e.parameter && e.parameter.mode) || (
       e && e.postData && e.postData.type && String(e.postData.type).indexOf("application/json") !== -1 ? "signup" : "signup"
     );
+
+    // ✅ تسجيل دخول الأدمن عبر POST فقط
+    if (mode === "login"){
+      const user = String((e.parameter && e.parameter.user) || "").trim();
+      const pass = String((e.parameter && e.parameter.pass) || "").trim();
+      const ok = _isAdmin_(adm, user, pass);
+      return _json_({ ok });
+    }
 
     if (mode === "attendance"){
       const user  = String((e.parameter && e.parameter.user) || "");
