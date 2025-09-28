@@ -7,40 +7,89 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="container">
+  <header class="site-header">
     <h1>تسجيل رغبات الدفعة</h1>
-    <p class="hint">اكتب اسمك ورقم جلوسك واختر رغبتك. الأماكن محدودة لكل رغبة.</p>
+    <p class="sub">اكتب اسمك ورقم جلوسك واختر رغبتك. الأماكن محدودة لكل رغبة.</p>
+  </header>
 
-    <form id="pref-form">
-      <label for="name">الاسم الكامل</label>
-      <input id="name" name="name" type="text" required placeholder="مثال: أحمد محمد علي" />
+  <main class="grid">
+    <section class="card">
+      <h2 class="card-title">بيانات الطالب</h2>
+      <form id="pref-form" class="form">
+        <label for="name">الاسم الكامل</label>
+        <input id="name" name="name" type="text" required placeholder="مثال: أحمد محمد علي" autocomplete="off" />
 
-      <label for="seat">رقم الجلوس</label>
-      <input id="seat" name="seat" type="text" inputmode="numeric" pattern="\d{1,10}" required placeholder="مثال: 1234" />
+        <label for="seat">رقم الجلوس</label>
+        <input id="seat" name="seat" type="text" inputmode="numeric" required placeholder="مثال: 1234" autocomplete="off" />
 
-      <label for="choice">الرغبة</label>
-      <select id="choice" name="choice" required>
-        <option value="" disabled selected>اختر رغبتك</option>
-      </select>
+        <label for="choice">الرغبة</label>
+        <select id="choice" name="choice" required>
+          <option value="" disabled selected>اختر رغبتك</option>
+        </select>
 
-      <button type="submit" id="submitBtn">تسجيل</button>
-    </form>
+        <button type="submit" id="submitBtn" class="btn-primary">تسجيل</button>
+      </form>
 
-    <section id="status" class="status" aria-live="polite"></section>
+      <div id="status" class="status" aria-live="polite"></div>
+    </section>
 
-    <details class="meta">
-      <summary>عن النظام</summary>
-      <ul>
-        <li>البيانات تُخزن في Google Sheets (خلفية بلا سيرفر تديرها جوجل).</li>
-        <li>النظام يمنع تكرار رقم الجلوس ويقفل الرغبات تلقائيًا عند اكتمال السعة.</li>
-      </ul>
-    </details>
+    <section class="card">
+      <h2 class="card-title">إحصائيات مباشرة</h2>
+      <div id="stats" class="stats">
+        <!-- تُملأ ديناميكياً -->
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">لوحة الليدرز</h2>
+      <button id="adminOpen" class="btn-ghost">تسجيل الحضور (للأدمن)</button>
+      <p class="muted">خاص بالمسؤولين فقط.</p>
+    </section>
   </main>
 
-  <!-- ضع رابط الويب‑آب هنا -->
+  <!-- نافذة الأدمن -->
+  <dialog id="adminDialog" class="dialog">
+    <form method="dialog" class="dialog-card" id="adminLoginForm">
+      <h3>تسجيل دخول الأدمن</h3>
+      <label>اسم المستخدم</label>
+      <input id="adminUser" autocomplete="username" required />
+      <label>كلمة السر</label>
+      <input id="adminPass" type="password" autocomplete="current-password" required />
+      <menu class="dialog-actions">
+        <button value="cancel" class="btn-ghost">إلغاء</button>
+        <button id="adminLoginBtn" class="btn-primary" value="login">دخول</button>
+      </menu>
+      <div id="adminLoginMsg" class="status"></div>
+    </form>
+
+    <form method="dialog" class="dialog-card" id="adminPanel" hidden>
+      <h3>تسجيل الحضور</h3>
+
+      <div class="toolbar">
+        <input id="searchInput" placeholder="ابحث بالاسم أو رقم الجلوس" />
+        <input id="attDate" type="date" />
+        <button id="refreshSubs" class="btn-ghost" type="button">تحديث القائمة</button>
+      </div>
+
+      <div id="subsTable" class="table"></div>
+
+      <menu class="dialog-actions">
+        <button value="close" class="btn-ghost">إغلاق</button>
+        <button id="saveAttendance" class="btn-primary" type="button">تسجيل الحضور</button>
+      </menu>
+      <div id="adminMsg" class="status"></div>
+    </form>
+  </dialog>
+
+  <footer class="site-footer">
+    <a href="https://t.me/Dr_Ahmed_Eisa" target="_blank" rel="noopener noreferrer">
+      Developer: Dr_Ahmed_Eisa
+    </a>
+  </footer>
+
   <script>
     window.APP_CONFIG = {
-      ENDPOINT: "https://script.google.com/macros/s/AKfycbzSuEM95Km6OyofHXO85843Zn0EO1-hBGJrOj3q2hDPyafV6U2kdDBzVQr1x2fyQ_j4/exec" // مثال: https://script.google.com/macros/s/AKfycbx.../exec
+      ENDPOINT: "PASTE_YOUR_WEBAPP_URL_HERE" // مثال: https://script.google.com/macros/s/AKfycbx.../exec
     };
   </script>
   <script src="script.js"></script>
