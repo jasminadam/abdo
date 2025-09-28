@@ -148,18 +148,16 @@ form.addEventListener("submit", async (e)=>{
 // Admin dialog
 adminOpen.addEventListener("click", ()=> { dlg.showModal(); });
 
-// Login via POST
+// ✅ Login عبر GET (مع ts لمنع الكاش)
 adminLoginBtn.addEventListener("click", async (ev)=>{
   ev.preventDefault();
   const user = $("#adminUser").value.trim();
   const pass = $("#adminPass").value.trim();
   adminLoginMsg.textContent = "جار التحقق...";
   try{
-    const fd = new FormData();
-    fd.append("mode","login");
-    fd.append("user", user);
-    fd.append("pass", pass);
-    const res = await fetch(ENDPOINT, { method:"POST", body:fd });
+    const url = ENDPOINT + "?action=login&u=" + encodeURIComponent(user) +
+                "&p=" + encodeURIComponent(pass) + "&ts=" + Date.now();
+    const res = await fetch(url, { method: "GET" });
     const data = await res.json();
 
     if(data && data.ok){
@@ -204,7 +202,7 @@ async function loadSubmissions(){
     const url = ENDPOINT + "?action=submissions&ts=" + Date.now();
     const res = await fetch(url);
     const data = await res.json();
-    console.log("submissions JSON:", data); // 👈 يساعدنا لو حصلت مشكلة
+    console.log("submissions JSON:", data);
 
     if(!data.ok) throw new Error(data.reason || "load failed");
 
