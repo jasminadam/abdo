@@ -74,7 +74,7 @@ function doOptions(e){ return ContentService.createTextOutput(""); }
 
 function doGet(e){
   try{
-    const { cfg, sub, adm } = getSheets_();
+    const { cfg, sub } = getSheets_();
     const action = (e && e.parameter && e.parameter.action) || "choices";
 
     if (action === "choices"){
@@ -84,17 +84,30 @@ function doGet(e){
     }
 
     if (action === "submissions"){
-      // قراءة قوية بدون الاعتماد فقط على getLastRow
-      const rng  = sub.getDataRange().getValues();
-      const rows = (rng.length > 1 ? rng.slice(1) : [])
-        .filter(r => String(r[1]).trim() !== "" || String(r[2]).trim() !== "" || String(r[3]).trim() !== "");
-      const submissions = rows.map(r=>({ ts:r[0], name:String(r[1]).trim(), seat:String(r[2]).trim(), choice:String(r[3]).trim() }));
+      // robust: جرّب getLastRow ثم fallback إلى getDataRange
+      let values = [];
+      const lastRow = sub.getLastRow();
+      if (lastRow >= 2){
+        values = sub.getRange(2,1,lastRow-1,4).getValues();
+      } else {
+        const rng = sub.getDataRange().getValues();
+        values = rng.length > 1 ? rng.slice(1) : [];
+      }
+      // شيل الصفوف الفارغة فقط
+      const rows = values.filter(r =>
+        String(r[1]).trim() !== "" || String(r[2]).trim() !== "" || String(r[3]).trim() !== ""
+      );
+      const submissions = rows.map(r=>({
+        ts: r[0],
+        name: String(r[1]).trim(),
+        seat: String(r[2]).trim(),
+        choice: String(r[3]).trim()
+      }));
       return _json_({ ok:true, submissions });
     }
 
-    // (ملاحظة) التحقق الحقيقي للأدمن ننفذه في doPost(mode=login)
+    // التحقق الحقيقي للأدمن يتم في doPost(mode=login)
     if (action === "login"){
-      // رجّع رفض صريح لو حد حاول GET
       return _json_({ ok:false, reason:"use POST mode=login" });
     }
 
@@ -114,7 +127,6 @@ function doPost(e){
       e && e.postData && e.postData.type && String(e.postData.type).indexOf("application/json") !== -1 ? "signup" : "signup"
     );
 
-    // ✅ تسجيل دخول الأدمن عبر POST فقط
     if (mode === "login"){
       const user = String((e.parameter && e.parameter.user) || "").trim();
       const pass = String((e.parameter && e.parameter.pass) || "").trim();
@@ -145,7 +157,7 @@ function doPost(e){
       return _json_({ ok:true, saved:rows.length });
     }
 
-    // default: signup (supports JSON or form-encoded)
+    // default: signup
     let name="", seat="", choice="";
     const isJSON = !!(e && e.postData && e.postData.type &&
                       String(e.postData.type).indexOf("application/json") !== -1);
