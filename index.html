@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>تسجيل رغبات الدفعة</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>تسجيل رغبات الدفعة</h1>
+    <p class="hint">اكتب اسمك ورقم جلوسك واختر رغبتك. الأماكن محدودة لكل رغبة.</p>
+
+    <form id="pref-form">
+      <label for="name">الاسم الكامل</label>
+      <input id="name" name="name" type="text" required placeholder="مثال: أحمد محمد علي" />
+
+      <label for="seat">رقم الجلوس</label>
+      <input id="seat" name="seat" type="text" inputmode="numeric" pattern="\d{1,10}" required placeholder="مثال: 1234" />
+
+      <label for="choice">الرغبة</label>
+      <select id="choice" name="choice" required>
+        <option value="" disabled selected>اختر رغبتك</option>
+      </select>
+
+      <button type="submit" id="submitBtn">تسجيل</button>
+    </form>
+
+    <section id="status" class="status" aria-live="polite"></section>
+
+    <details class="meta">
+      <summary>عن النظام</summary>
+      <ul>
+        <li>البيانات تُخزن في Google Sheets (خلفية بلا سيرفر تديرها جوجل).</li>
+        <li>النظام يمنع تكرار رقم الجلوس ويقفل الرغبات تلقائيًا عند اكتمال السعة.</li>
+      </ul>
+    </details>
+  </main>
+
+  <!-- ضع رابط الويب‑آب هنا -->
+  <script>
+    window.APP_CONFIG = {
+      ENDPOINT: "https://script.google.com/macros/s/AKfycbwj2omfkVrAVZOnhn3Lh5wxGSw4OgIxStIygZn-M_NQMDckgIckMDtsLD961MEyUdO7/exec" // مثال: https://script.google.com/macros/s/AKfycbx.../exec
+    };
+  </script>
+  <script src="script.js"></script>
+</body>
+</html>
