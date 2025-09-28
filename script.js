@@ -60,7 +60,6 @@ async function loadCapacities(silent = false){
     if(!data.ok) throw new Error(data.reason || "تعذر التحميل");
 
     // fill select
-    const current = choiceSelect.value;
     choiceSelect.innerHTML = '<option value="" disabled selected>اختر رغبتك</option>';
     data.choices.forEach(c=>{
       const remaining = Math.max(0, Number(c.capacity)-Number(c.taken));
@@ -70,7 +69,6 @@ async function loadCapacities(silent = false){
       opt.textContent = remaining>0 ? `${c.choice} — متبقي ${remaining}` : `${c.choice} — مكتملة`;
       choiceSelect.appendChild(opt);
     });
-    choiceSelect.value = ""; // reset
 
     // cards stats
     renderStats(data.choices);
@@ -166,14 +164,21 @@ form.addEventListener("submit", async (e)=>{
 // Admin dialog
 adminOpen.addEventListener("click", ()=> { dlg.showModal(); });
 
+// ✅ تسجيل دخول الأدمن عبر POST فقط
 adminLoginBtn.addEventListener("click", async (ev)=>{
   ev.preventDefault();
   const user = $("#adminUser").value.trim();
   const pass = $("#adminPass").value.trim();
   adminLoginMsg.textContent = "جار التحقق...";
   try{
-    const res = await fetch(ENDPOINT + "?action=login&u="+encodeURIComponent(user)+"&p="+encodeURIComponent(pass));
+    const fd = new FormData();
+    fd.append("mode","login");
+    fd.append("user", user);
+    fd.append("pass", pass);
+
+    const res = await fetch(ENDPOINT, { method:"POST", body:fd });
     const data = await res.json();
+
     if(data && data.ok){
       adminCreds = { user, pass };
       adminLoginForm.hidden = true;
@@ -209,7 +214,7 @@ function filterSubs(list, q){
   );
 }
 
-// ✅ نسخة أقوى + منع كاش بالـ ts
+// تحميل المسجلين (مع منع الكاش)
 async function loadSubmissions(){
   subsTable.innerHTML = "<div class='cell'>جارِ التحميل...</div>";
   try{
