@@ -3,7 +3,7 @@
  * Sheets:
  *  - Config: [Choice, Capacity]
  *  - Submissions: [Timestamp, Name, Seat, Choice]
- *  - Admins: [Username, Password]          // نصيحة: كلمات سر بسيطة أو هاش
+ *  - Admins: [Username, Password]
  *  - Attendance: [TS, Date, Seat, Name, Choice, Admin]
  */
 
@@ -84,9 +84,11 @@ function doGet(e){
     }
 
     if (action === "submissions"){
-      const lastRow = sub.getLastRow();
-      const values = lastRow<2 ? [] : sub.getRange(2,1,lastRow-1,4).getValues();
-      const submissions = values.map(r=>({ ts:r[0], name:r[1], seat:String(r[2]), choice:r[3] }));
+      // ✅ قراءة قوية بدون الاعتماد فقط على getLastRow
+      const rng  = sub.getDataRange().getValues();
+      const rows = (rng.length > 1 ? rng.slice(1) : [])
+        .filter(r => String(r[1]).trim() !== "" || String(r[2]).trim() !== "" || String(r[3]).trim() !== "");
+      const submissions = rows.map(r=>({ ts:r[0], name:String(r[1]).trim(), seat:String(r[2]).trim(), choice:String(r[3]).trim() }));
       return _json_({ ok:true, submissions });
     }
 
